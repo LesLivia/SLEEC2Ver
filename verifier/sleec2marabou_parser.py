@@ -108,10 +108,10 @@ def _number(value):
 
 # A measure relation of the relation block -> the condition it states.
 MEASURE_RELATIONS = {
-    'imply':           lambda a, b: _or(_not(a), b),
-    'iff':             lambda a, b: _or(_and(a, b), _and(_not(a), _not(b))),
+    'imply': lambda a, b: _or(_not(a), b),
+    'iff': lambda a, b: _or(_and(a, b), _and(_not(a), _not(b))),
     'mutualExclusive': lambda a, b: _not(_and(a, b)),
-    'opposite':        lambda a, b: _or(_and(a, _not(b)), _and(_not(a), b)),
+    'opposite': lambda a, b: _or(_and(a, _not(b)), _and(_not(a), b)),
 }
 
 
@@ -564,7 +564,7 @@ class MarabouGenerator:
             return (node.ID.name, '=', 0 if negate else 1)
         if node.__class__.__name__ == 'NumericalOp':
             return self._numeric_literal(node, NEGATED_OP[node.op] if negate else node.op)
-        lhs, rhs = self._term(node.lhs), self._term(node.rhs)   # a ScalarBinaryOp
+        lhs, rhs = self._term(node.lhs), self._term(node.rhs)  # a ScalarBinaryOp
         if lhs[0] != 'measure':
             raise ValueError("left side of a comparison must be a {measure}")
         if rhs[0] == 'measure':
@@ -830,7 +830,7 @@ class MarabouGenerator:
             # of them, conjoined with the rest of the query.
             return self._equation(lit) + ["    net.addEquation(e)"]
         idx = self.measures[name]
-        self._check_threshold(name, val)        # the threshold as the rule states it
+        self._check_threshold(name, val)  # the threshold as the rule states it
         written = f"{name} {op} {val}"
         op, val = self._strict_as_closed(op, val)
         self._check_shifted(name, op, val, written)
@@ -851,7 +851,7 @@ class MarabouGenerator:
         return ([f"    {calls[0]}  # {note}"]
                 + [f"    {call}" for call in calls[1:]])
 
-    def _equation(self, lit):
+    def _equation(self, lit, core=False):
         """A comparison -> the lines that build it as the Marabou equation 'e'.
 
         An equation takes any number of addends, so one measure and a linear form of
@@ -867,7 +867,8 @@ class MarabouGenerator:
         note = written if f"{val}" in written else f"{written} -> {op} {val}"
         rel = 'EQ' if op == '=' else ('LE' if op in ('<', '<=') else 'GE')
         terms = ((1, subject),) if isinstance(subject, str) else subject
-        return ([f"    e = MarabouUtils.Equation(MarabouCore.Equation.{rel})  # {note}"]
+        equation_class = 'MarabouCore' if core else 'MarabouUtils'
+        return ([f"    e = {equation_class}.Equation(MarabouCore.Equation.{rel})  # {note}"]
                 + [f"    e.addAddend({coef}, net.inputVars[0][0][{self.measures[name]}])"
                    for coef, name in terms]
                 + [f"    e.setScalar({val})"])
@@ -883,7 +884,7 @@ class MarabouGenerator:
         for n, conjunction in enumerate(disjuncts):
             lines.append(f"    d{tag}_{n} = []")
             for lit in conjunction:
-                lines += self._equation(lit) + [f"    d{tag}_{n}.append(e)"]
+                lines += self._equation(lit, core=True) + [f"    d{tag}_{n}.append(e)"]
             lines.append(f"    disjuncts{tag}.append(d{tag}_{n})")
         lines.append(f"    net.addDisjunctionConstraint(disjuncts{tag})")
         return lines
@@ -1001,9 +1002,8 @@ class MarabouGenerator:
             else:
                 if mode == "Normal":
                     lines.append(f"    # {name} >= {target_action.name}{plus}")
-                    # Marabou 2.0 reads EquationType/addendList/scalar off this object,
-                    # so it must be a MarabouUtils.Equation with an explicit scalar.
-                    lines.append(f"    eq = MarabouUtils.Equation(MarabouCore.Equation.GE)")
+                    # Disjunctions require MarabouCore.Equation, not MarabouUtils.Equation.
+                    lines.append(f"    eq = MarabouCore.Equation(MarabouCore.Equation.GE)")
                     lines.append(f"    eq.addAddend(1, outputVars[{idx}])")
                     lines.append(f"    eq.addAddend(-1, outputVars[{target_idx}])")
                     lines.append(f"    eq.setScalar({step})")
@@ -1021,7 +1021,7 @@ class MarabouGenerator:
         if independent:
             if mode == "Normal":
                 lines.append(f"    # {target_action.name} not permitted")
-                lines.append(f"    eq = MarabouUtils.Equation(MarabouCore.Equation.LE)")
+                lines.append(f"    eq = MarabouCore.Equation(MarabouCore.Equation.LE)")
                 lines.append(f"    eq.addAddend(1, outputVars[{target_idx}])")
                 lines.append(f"    eq.setScalar({shifted_threshold})")
                 lines.append(f"    equations.append([eq])")
@@ -1074,7 +1074,7 @@ class MarabouGenerator:
                 lines.append(f"    option = []")
                 for target in allowed:
                     lines += [
-                        f"    eq = MarabouUtils.Equation(MarabouCore.Equation.GE)",
+                        f"    eq = MarabouCore.Equation(MarabouCore.Equation.GE)",
                         f"    eq.addAddend(1, outputVars[{idx}])",
                         f"    eq.addAddend(-1, outputVars[{target}])",
                         f"    eq.setScalar({step})",
@@ -1122,7 +1122,7 @@ class MarabouGenerator:
                 f"    # {name} <= {shifted_threshold} "
                 f"OR some output outside the chain >= {name}{plus}",
                 f"    equations = []",
-                f"    eq = MarabouUtils.Equation(MarabouCore.Equation.LE)",
+                f"    eq = MarabouCore.Equation(MarabouCore.Equation.LE)",
                 f"    eq.addAddend(1, outputVars[{target}])",
                 f"    eq.setScalar({shifted_threshold})",
                 f"    equations.append([eq])",
@@ -1130,7 +1130,7 @@ class MarabouGenerator:
             for idx in self.outputs.values():
                 if idx not in allowed:
                     lines += [
-                        f"    eq = MarabouUtils.Equation(MarabouCore.Equation.GE)",
+                        f"    eq = MarabouCore.Equation(MarabouCore.Equation.GE)",
                         f"    eq.addAddend(1, outputVars[{idx}])",
                         f"    eq.addAddend(-1, outputVars[{target}])",
                         f"    eq.setScalar({step})",

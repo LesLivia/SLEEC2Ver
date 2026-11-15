@@ -1,21 +1,53 @@
 def_start
- event cmdRequired
- measure speedAustin: numeric
- constant speedAustinLB = 0.38999999
- constant speedAustinUB = 0.76999998
- measure speedLoop: numeric
- constant speedLoopLB = 0.11000000
- constant speedLoopUB = 0.50999999
- measure speedAustinPrevious: numeric
- constant speedAustinPreviousLB = 0.38999999
- constant speedAustinPreviousUB = 0.68000001
- measure speedLoopPrevious: numeric
- constant speedLoopPreviousLB = 0.11000000
- constant speedLoopPreviousUB = 0.60000002
- event outputPrioritizeAustin
- event outputPrioritizeLoop
+    event cmdRequired
+
+    // Input 0: Austin current speed, normalized as mph / 50
+    measure speedAustin: numeric
+    constant speedAustinLB = 0.38999999
+    constant speedAustinUB = 0.76999998
+
+    // Input 1: Chicago Loop current speed, normalized as mph / 50
+    measure speedLoop: numeric
+    constant speedLoopLB = 0.11000000
+    constant speedLoopUB = 0.50999999
+
+    // Input 2: Austin previous-hour speed, normalized as mph / 50
+    measure speedAustinPrevious: numeric
+    constant speedAustinPreviousLB = 0.38999999
+    constant speedAustinPreviousUB = 0.68000001
+
+    // Input 3: Chicago Loop previous-hour speed, normalized as mph / 50
+    measure speedLoopPrevious: numeric
+    constant speedLoopPreviousLB = 0.11000000
+    constant speedLoopPreviousUB = 0.60000002
+
+    // Output logit 0
+    event outputPrioritizeAustin
+
+    // Output logit 1
+    event outputPrioritizeLoop
+
+    // Thresholds elicited from training-only reference speeds
+    constant austinCurrentThreshold = 0.5080
+    constant austinPreviousThreshold = 0.5082
+    constant loopAcceptableThreshold = 0.3272
+    constant loopCurrentThreshold = 0.3504
+    constant loopPreviousThreshold = 0.3506
+    constant austinAcceptableThreshold = 0.4954
 def_end
+
 rule_start
-r1 when cmdRequired and ((speedAustin < 0.49546665) and (speedLoop > 0.35043335)) then outputPrioritizeAustin
-r2 when cmdRequired and ((speedLoop < 0.32723331) and (speedAustin > 0.50800002)) then outputPrioritizeLoop
+    // C1: Austin crosses below its reference speed while Loop remains acceptable.
+    rC1 when cmdRequired
+        and ((({speedAustin} < austinCurrentThreshold)
+              and ({speedAustinPrevious} > austinPreviousThreshold))
+             and ({speedLoop} > loopAcceptableThreshold))
+        then outputPrioritizeAustin
+
+    // C2: Loop crosses below its reference speed while Austin remains acceptable.
+    rC2 when cmdRequired
+        and ((({speedLoop} < loopCurrentThreshold)
+              and ({speedLoopPrevious} > loopPreviousThreshold))
+             and ({speedAustin} > austinAcceptableThreshold))
+        then outputPrioritizeLoop
 rule_end

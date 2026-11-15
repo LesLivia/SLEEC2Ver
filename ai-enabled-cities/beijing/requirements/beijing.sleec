@@ -1,20 +1,46 @@
 def_start
- event cmdRequired
- measure pm25Current: numeric
- constant pm25CurrentLB = 0.00000000
- constant pm25CurrentUB = 1.37000000
- measure pm25Previous: numeric
- constant pm25PreviousLB = 0.00000000
- constant pm25PreviousUB = 1.37000000
- measure temperature: numeric
- constant temperatureLB = -0.20000000
- constant temperatureUB = 0.77999997
- measure windSpeed: numeric
- constant windSpeedLB = 0.00000000
- constant windSpeedUB = 0.98000002
- event outputIssueAlert
- event outputNoAlert
+    event cmdRequired
+
+    // Input 0: current PM2.5, normalized as micrograms/m3 / 500
+    measure pm25Current: numeric
+    constant pm25CurrentLB = 0.00000000
+    constant pm25CurrentUB = 1.37000000
+
+    // Input 1: previous-hour PM2.5, normalized as micrograms/m3 / 500
+    measure pm25Previous: numeric
+    constant pm25PreviousLB = 0.00000000
+    constant pm25PreviousUB = 1.37000000
+
+    // Input 2: current temperature, normalized as degrees Celsius / 50
+    measure temperature: numeric
+    constant temperatureLB = -0.20000000
+    constant temperatureUB = 0.77999997
+
+    // Input 3: current wind speed, normalized as m/s / 10
+    measure windSpeed: numeric
+    constant windSpeedLB = 0.00000000
+    constant windSpeedUB = 0.98000002
+
+    // Output logit 0
+    event outputIssueAlert
+
+    // Output logit 1
+    event outputNoAlert
+
+    // Illustrative health-advisory thresholds, in normalized PM2.5 units
+    constant severePM25Threshold = 0.30
+    constant persistentPM25Threshold = 0.15
 def_end
+
 rule_start
-r1 when cmdRequired and (pm25Current > 0.30000000) then outputIssueAlert
+    // B1: issue a health advisory when current PM2.5 exceeds 150 micrograms/m3.
+    rB1 when cmdRequired
+        and ({pm25Current} > severePM25Threshold)
+        then outputIssueAlert
+
+    // B2: issue a precautionary advisory when two hourly readings exceed 75 micrograms/m3.
+    rB2 when cmdRequired
+        and (({pm25Current} > persistentPM25Threshold)
+             and ({pm25Previous} > persistentPM25Threshold))
+        then outputIssueAlert
 rule_end
