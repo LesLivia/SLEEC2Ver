@@ -1,0 +1,21 @@
+def_start
+ event cmdRequired
+ measure speedAustin: numeric
+ constant speedAustinLB = 0.38999999
+ constant speedAustinUB = 0.76999998
+ measure speedLoop: numeric
+ constant speedLoopLB = 0.11000000
+ constant speedLoopUB = 0.50999999
+ measure speedAustinPrevious: numeric
+ constant speedAustinPreviousLB = 0.38999999
+ constant speedAustinPreviousUB = 0.68000001
+ measure speedLoopPrevious: numeric
+ constant speedLoopPreviousLB = 0.11000000
+ constant speedLoopPreviousUB = 0.60000002
+ event outputPrioritizeAustin
+ event outputPrioritizeLoop
+def_end
+rule_start
+r1 when cmdRequired and ((speedAustin < 0.49546665) and (speedLoop > 0.35043335)) then outputPrioritizeAustin
+r2 when cmdRequired and ((speedLoop < 0.32723331) and (speedAustin > 0.50800002)) then outputPrioritizeLoop
+rule_end

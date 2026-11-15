@@ -23,3 +23,8 @@ autonomous_driving/CBM/rssgen/
 .dev.vars
 
 .DS_Store
+/ai-enabled-cities/beijing/results/compatibility/
+/ai-enabled-cities/beijing/results/
+/ai-enabled-cities/compatibility.log
+/ai-enabled-cities/verify_compatibility.py
+/ai-enabled-cities/chicago/results/

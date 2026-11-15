@@ -1,0 +1,20 @@
+def_start
+ event cmdRequired
+ measure pm25Current: numeric
+ constant pm25CurrentLB = 0.00000000
+ constant pm25CurrentUB = 1.37000000
+ measure pm25Previous: numeric
+ constant pm25PreviousLB = 0.00000000
+ constant pm25PreviousUB = 1.37000000
+ measure temperature: numeric
+ constant temperatureLB = -0.20000000
+ constant temperatureUB = 0.77999997
+ measure windSpeed: numeric
+ constant windSpeedLB = 0.00000000
+ constant windSpeedUB = 0.98000002
+ event outputIssueAlert
+ event outputNoAlert
+def_end
+rule_start
+r1 when cmdRequired and (pm25Current > 0.30000000) then outputIssueAlert
+rule_end
